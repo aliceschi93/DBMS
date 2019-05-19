@@ -1,0 +1,62 @@
+### first file
+
+
+// UPDATING DOCUMENT
+
+db.trips.update({"vendor_id": 1}, {$set:{"vendor_id":"Creative Mobile Technologies"}},{multi:true})
+db.trips.update({"vendor_id": 2}, {$set:{"vendor_id":"VeriFone Inc"}},{multi:true})
+
+
+db.trips.update({"pay_type": 1}, {$set:{"pay_type":"CreditCard"}}, {multi:true})
+db.trips.update({"pay_type": 2}, {$set:{"pay_type":"Cash"}}, {multi:true})
+db.trips.update({"pay_type": 3}, {$set:{"pay_type":"NoCharge"}}, {multi:true})
+db.trips.update({"pay_type": 4}, {$set:{"pay_type":"Dispute"}}, {multi:true})
+db.trips.update({"pay_type": 5}, {$set:{"pay_type":"Unknown"}}, {multi:true})
+db.trips.update({"pay_type": 6}, {$set:{"pay_type":"VoidedTrip"}}, {multi:true})
+
+
+// CREATING THE EMBEDDED DATA
+
+db.trips.aggregate([{$lookup:{from:"lookup", localField:"pu_loc", foreignField:"LocationID", as:"embeddedData"}}])
+
+
+### second file
+
+
+/////	QUERIES		/////
+
+// 1) number of trips per vendor_id
+db.trips.aggregate([
+    {$group: {_id: "$vendor_id", myCount: { $sum: 1 }}},
+    {$project: {_id : 1, myCount : 1}}])
+
+
+// 2) most common payment_type
+db.trips.aggregate([{$group: {_id: "$pay_type", num_trips : {"$sum": 1}}},
+    {$sort: {num_trips : -1}},
+    {$limit : 1}
+])
+
+
+// 3) top 5 trips with both distance > 3 AND amount < 15
+ db.trips.find({$and : [{distance : {$gt : 3}}, {fare : {$lt : 15}}]}).limit(5).pretty()
+
+
+// 4) average trip_distance per VendorID	
+db.trips.aggregate([
+	{$group : {_id : "$vendor_id", avg : {$avg : "$distance"}}},
+	{$project : {_id : 1, avg : 1}}
+	])
+
+
+// 5) trips with most common vendor_id AND NOT most common Borough
+db.trips.aggregate([{$lookup : {from : "lookup", localField : "pu_loc", foreignField : "LocationID", as : "embedded"}}, 
+	{$match : {vendor_id : "Creative Mobile Technologies", "embedded.Borough" : {$ne : "Manhattan"}}}, 
+	{$project : {_id : 0, vendor_id : 1, distance : 1, "embedded.Borough" : 1}}
+])
+
+
+
+
+
+
