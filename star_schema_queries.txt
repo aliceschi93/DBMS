@@ -1,0 +1,49 @@
+### number of trips with most common pay_type group by borough
+
+
+SELECT tbl.bor, tbl.num_trips, tbl.pay
+from (
+	SELECT count(id_trip) as num_trips, borough as bor, pu_loc as loc_id, pay_name as pay
+	from lookup, fact_trip, pay_tab
+	where fact_trip.pu_loc = lookup.loc_id and fact_trip.pay_type = pay_tab.pay_type and fact_trip.pay_type = 1
+	GROUP BY bor
+) as tbl
+group by tbl.bor
+order by tbl.num_trips desc;
+
+
+
+### number of trips from Brooklyn in a given week
+
+SELECT borough, count(fact_trip.id_trip) as num_trips, provider
+from fact_trip, time_info, lookup, provider
+where fact_trip.id_trip = time_info.id_trip and fact_trip.pu_loc = lookup.loc_id and fact_trip.vendor_id = provider.vend_id
+		and provider = 'VeriFone Inc' and date_pick between '2018-01-01' and '2018-01-08' and borough = 'Brooklyn';
+
+
+### some values grouped by service_zone
+
+        
+SELECT service_zone, count(id_trip) as num_trips, round(avg(total), 2) as avg_total, round(avg(distance), 2) as avg_distance
+from lookup, fact_trip
+where fact_trip.pu_loc = lookup.loc_id 
+group by service_zone
+order by service_zone;
+
+
+
+### some values grouped by borough (roll up)
+
+
+SELECT borough, count(id) as num_trips, round(avg(total), 2) as avg_total, round(avg(distance), 2) as avg_distance
+from lookup, fact_trip
+where fact_trip.pu_loc = lookup.loc_id 
+group by borough
+
+
+### outliers
+
+SELECT borough, date_pick, pass_num, total, distance
+from fact_trip, time_info, lookup
+where fact_trip.id_trip = time_info.id_trip and date_pick not between '2018-01-01' and '2018-01-31' or total < 3 or distance > 100 or distance = 0
+					and fact_trip.pu_loc = lookup.loc_id;
